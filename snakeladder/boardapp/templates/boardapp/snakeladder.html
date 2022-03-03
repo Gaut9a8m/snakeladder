@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title></title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" integrity="sha384-1BmE4kWBq78iYhFldvKuhfTAU6auU8tT94WrHftjDbrCEXSU1oBoqyl2QvZ6jIW3" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css">
+    <script
+    src="https://code.jquery.com/jquery-3.6.0.min.js"
+    integrity="sha256-/xUj+3OJU5yExlq6GSYGSHk7tPXikynS7ogEvDej/m4="
+    crossorigin="anonymous"></script>
+
+    <script>
+    $(document).ready(function(){
+      var prev_score = "{{prev_score}}"
+      var next_score = "{{next_score}}"
+      var players_list = {{players_stats|safe}}
+
+      if(prev_score != '' && next_score != ''){
+        console.log('prev_score=',prev_score);
+        console.log('next_score=',next_score);
+        document.getElementById(prev_score).innerHTML = "";
+        document.getElementById(next_score).innerHTML = "<img src='/static/boardapp/images/pin{{chance}}.png' id='pic{{chance}}' alt='img' height='80px' style='z-index: 999;'>";
+      }
+
+      // populate token on desired block
+      for (let i = 0; i < players_list.length; i++) {
+        let point = players_list[i]['overall_score'];
+
+        if (players_list[i]['overall_score'] != 0){
+          $("#rest-pic"+(i+1)).hide();
+        }
+
+        if (point != 0 && ((i+1) != {{chance}})){
+          let pos;
+            if (point < 10){
+              pos = "block0"+point;
+            }else{
+              pos = "block"+point;
+            }
+            console.log('pos=',pos);
+            // document.getElementById(pos).innerHTML = "";
+            document.getElementById(pos).innerHTML = "<img src='/static/boardapp/images/pin"+(i+1)+".png' id='pic"+(i+1)+"' height='80px' style='z-index: 999;'>";
+
+        }
+      }
+
+      $("#close").click(function(e){
+        var flag = document.getElementById("mssg-id").innerHTML;
+        let x = "{% url 'index' %}";
+        if (flag=="Success Message"){
+          // console.log(x);
+          window.location.href=x;
+        }
+        $("#nofity").attr("style", "display:none !important;");
+      });
+    });
+    </script>
+  </head>
+  <body>
+      <center>
+        <table class="score-table">
+          <tr>
+                <th class="stats-table">Name</th>
+                {%for player in players_stats%}
+                {% if player_turn == player.name %}
+                  <td class="stats-table"><i class="fa fa-arrow-right" aria-hidden="true"></i>{{player.name}}</td>
+                {% else %}
+                <td class="stats-table">{{player.name}}</td>
+                {%endif%}
+                {% endfor %}
+          </tr>
+          <tr>
+            <th class="stats-table">Score</th>
+            {%for player in players_stats%}
+            <td class="stats-table">{{player.overall_score}}</td>
+            {% endfor %}
+          </tr>
+        </table>
+        <!-- board start -->
+        <table class="board">
+          {% for item in '9876543210'|make_list %}
+            <tr id="row">
+              {% if item|divisibleby:2 %}
+                {% for inneritem in '0123456789'|make_list %}
+                <td id="block{{item}}{{inneritem}}" style="height:75px; width:75px;"></td>
+                {% endfor %}
+              {% else %}
+                {% for inneritem in '9876543210'|make_list %}
+                <td id="block{{item}}{{inneritem}}" style="height:75px; width:75px;"></td>
+                {% endfor %}
+            {% endif %}
+            </tr>
+          {% endfor %}
+        </table>
+        <!-- board end -->
+<!-- initial token -->
+        {%for player in players_stats%}
+        <img src="/static/boardapp/images/pin{{forloop.counter}}.png" id='rest-pic{{forloop.counter}}' alt="img" height="80px" style="position: absolute;z-index: 999; top: 740px;left: 180px;">
+        {%endfor%}
+<!-- initial token end -->
+
+<!-- Dice images -->
+        {% if dicepicno %}
+        <img src="/static/boardapp/images/dice{{dicepicno}}.png" id='dice' height="80px"  style="position: absolute;z-index: 999; right: 100px; bottom:90px;">
+        {% endif %}
+        <form class="" method="POST">
+          {% csrf_token %}
+          {%for no in diceno %}
+          <input type="hidden" name="diceno" value="{{no}}">
+          {% endfor %}
+
+          <input type="hidden" name="player_turn" value="{{player_turn}}">
+          {% if diceno|last == 6 %}
+          <p style="color:green; position: absolute;z-index: 999; right: 63px; bottom:233px;" >Hurry!! {{player_turn}} got <br> another Chance...</p>
+          {% elif err %}
+          <p style="color:blue; position: absolute;z-index: 999; right: 20px; bottom:233px;">{{err}}</p>
+          {% else %}
+          <p style="color:blue; position: absolute;z-index: 999; right: 20px; bottom:233px;">{{msg}}</p>
+          {% endif %}
+          <button class="btn btn-primary" type="submit" id='rolldice' name="rolldice " style="position: absolute;z-index: 999; right: 120px; bottom:200px">Roll</button>
+        </form>
+
+
+      </center>
+      {% if messages %}
+      <ul class="messages">
+        {% for message in messages %}
+        <div class="modal" id="nofity" style="display:block;">
+          <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+              <div class="p-4">
+                <div><button id="close" class="close">&times;</button></div>
+                <div>
+                  {% if message.tags == 'success' %}
+                  <h5 class="text-success text-center" id="mssg-id">Success Message</h5>
+                  {% elif message.tags == 'info' %}
+                  <h5 class="text-info text-center" id="mssg-id">Info Message</h5>
+                  {% endif %}
+                  <p class="text-center" >{{message}}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+  </body>
+  <style media="screen">
+    .board{
+      background-image: url("/static/boardapp/images/board.jpg");
+      background-size: cover;
+      margin-top:20px;
+    }
+    .score-table{
+      margin-top:20px;
+    }
+  .stats-table {
+      padding:5px;
+      border:1px solid black;
+    }
+  </style>
+</html>
